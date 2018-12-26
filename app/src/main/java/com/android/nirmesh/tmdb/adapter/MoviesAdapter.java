@@ -39,8 +39,6 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MyViewHold
     public void onBindViewHolder(final MoviesAdapter.MyViewHolder viewHolder, int position) {
         viewHolder.title.setText(movieList.get(position).getOriginalTitle());
         String vote = Double.toString(movieList.get(position).getVoteAverage());
-
-        String poster = "https://image.tmdb.org/t/p/w500" + movieList.get(position).getPosterPath();
         viewHolder.userrating.setText(vote);
 
         RequestOptions requestOptions = new RequestOptions();
@@ -63,6 +61,7 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MyViewHold
 
         public MyViewHolder(View view) {
             super(view);
+
             title = view.findViewById(R.id.title);
             userrating = view.findViewById(R.id.userRating);
             thumbnail = view.findViewById(R.id.thumbnail);
@@ -71,17 +70,20 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MyViewHold
                 @Override
                 public void onClick(View v) {
                     int pos = getAdapterPosition();
+
                     if (pos != RecyclerView.NO_POSITION) {
                         Movie clickedDataItem = movieList.get(pos);
+
                         Intent intent = new Intent(mContext, DetailActivity.class);
                         intent.putExtra("original_title", movieList.get(pos).getOriginalTitle());
                         intent.putExtra("poster_path", movieList.get(pos).getPosterPath());
                         intent.putExtra("overview", movieList.get(pos).getOverview());
                         intent.putExtra("vote_average", Double.toString(movieList.get(pos).getVoteAverage()));
                         intent.putExtra("release_date", movieList.get(pos).getReleaseDate());
-                        //intent.putExtra("id", movieList.get(pos).getId());
+                        intent.putExtra("id", movieList.get(pos).getId());
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         mContext.startActivity(intent);
+
                         Toast.makeText(v.getContext(), "You clicked " + clickedDataItem.getOriginalTitle(), Toast.LENGTH_SHORT).show();
                     }
                 }
