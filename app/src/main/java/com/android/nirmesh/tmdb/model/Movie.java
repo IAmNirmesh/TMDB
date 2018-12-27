@@ -71,6 +71,15 @@ public class Movie {
 
     public Movie() {}
 
+    // Method to Sort all the Movie List according to Name.
+    // To be called in TMDBActivity -> loadJSONForMostPopularMovies()
+    public static final Comparator<Movie> BY_NAME_ALPHABETICAL = new Comparator<Movie>() {
+        @Override
+        public int compare(Movie movie, Movie newMovie) {
+            return movie.originalTitle.compareTo(newMovie.originalTitle);
+        }
+    };
+
     public String getPosterPath() {
         return posterPath;
     }
