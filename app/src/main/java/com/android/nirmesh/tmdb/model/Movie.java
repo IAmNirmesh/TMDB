@@ -8,8 +8,6 @@ import java.util.List;
 
 public class Movie {
 
-    String baseImageUrl = "https://image.tmdb.org/t/p/w500";
-
     @SerializedName("poster_path")
     private String posterPath;
 
@@ -71,28 +69,10 @@ public class Movie {
         this.voteAverage = voteAverage;
     }
 
-    public Movie() {
-    }
-
-    // Method to Sort all the Movie List according to Name.
-    // To be called in MainActivity -> loadJson()
-    public static final Comparator<Movie> BY_NAME_ALPHABETICAL = new Comparator<Movie>() {
-        @Override
-        public int compare(Movie movie, Movie t1) {
-            return movie.originalTitle.compareTo(t1.originalTitle);
-        }
-    };
-
-    /*public String getBaseImageUrl() {
-        return baseImageUrl;
-    }
-
-    public void setBaseImageUrl(String baseImageUrl) {
-        this.baseImageUrl = baseImageUrl;
-    }*/
+    public Movie() {}
 
     public String getPosterPath() {
-        return "https://image.tmdb.org/t/p/w500" + posterPath;
+        return posterPath;
     }
 
     public void setPosterPath(String posterPath) {

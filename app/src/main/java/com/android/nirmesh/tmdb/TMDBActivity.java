@@ -7,6 +7,7 @@ import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.os.AsyncTask;
 import android.preference.PreferenceManager;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
@@ -22,6 +23,7 @@ import android.widget.Toast;
 import com.android.nirmesh.tmdb.adapter.MoviesAdapter;
 import com.android.nirmesh.tmdb.api.Client;
 import com.android.nirmesh.tmdb.api.Service;
+import com.android.nirmesh.tmdb.data.FavoriteDbHelper;
 import com.android.nirmesh.tmdb.model.Movie;
 import com.android.nirmesh.tmdb.model.MoviesResponse;
 
@@ -42,22 +44,15 @@ public class TMDBActivity extends AppCompatActivity
     private SwipeRefreshLayout mSwipeRefreshLayout;
     public static final String LOG_TAG = MoviesAdapter.class.getName();
 
+    private AppCompatActivity currentActivity = TMDBActivity.this;
+    private FavoriteDbHelper favoriteDbHelper;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tmdb);
 
         initViews();
-
-        mSwipeRefreshLayout = findViewById(R.id.main_content);
-        mSwipeRefreshLayout.setColorSchemeResources(android.R.color.holo_orange_dark);
-        mSwipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener(){
-            @Override
-            public void onRefresh(){
-                initViews();
-                Toast.makeText(TMDBActivity.this, "Movies Refreshed", Toast.LENGTH_SHORT).show();
-            }
-        });
     }
 
     private Activity getActivity() {
@@ -72,11 +67,6 @@ public class TMDBActivity extends AppCompatActivity
     }
 
     private void initViews() {
-        mProgressDialog = new ProgressDialog(this);
-        mProgressDialog.setMessage("Fetching movies...");
-        mProgressDialog.setCancelable(false);
-        mProgressDialog.show();
-
         recycler_view = findViewById(R.id.recycler_view);
 
         movieList = new ArrayList<>();
@@ -92,7 +82,18 @@ public class TMDBActivity extends AppCompatActivity
         recycler_view.setAdapter(moviesAdapter);
         moviesAdapter.notifyDataSetChanged();
 
-        //loadJSONForMostPopularMovies();
+        favoriteDbHelper = new FavoriteDbHelper(currentActivity);
+
+        mSwipeRefreshLayout = findViewById(R.id.main_content);
+        mSwipeRefreshLayout.setColorSchemeResources(android.R.color.holo_orange_dark);
+        mSwipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener(){
+            @Override
+            public void onRefresh(){
+                initViews();
+                Toast.makeText(TMDBActivity.this, "Movies Refreshed", Toast.LENGTH_SHORT).show();
+            }
+        });
+
         checkSortOrder();
     }
 
@@ -118,8 +119,6 @@ public class TMDBActivity extends AppCompatActivity
                     if (mSwipeRefreshLayout.isRefreshing()){
                         mSwipeRefreshLayout.setRefreshing(false);
                     }
-
-                    mProgressDialog.dismiss();
                 }
 
                 @Override
@@ -157,8 +156,6 @@ public class TMDBActivity extends AppCompatActivity
                     if (mSwipeRefreshLayout.isRefreshing()){
                         mSwipeRefreshLayout.setRefreshing(false);
                     }
-
-                    mProgressDialog.dismiss();
                 }
 
                 @Override
@@ -208,16 +205,60 @@ public class TMDBActivity extends AppCompatActivity
         if (sortOrder.equals(this.getString(R.string.pref_most_popular))) {
             Log.d(LOG_TAG, "Sorting by Most Popular");
             loadJSONForMostPopularMovies();
+        } else if (sortOrder.equals(this.getString(R.string.favorite))) {
+            Log.d(LOG_TAG, "Sorting by Favorite Movies");
+            initViewsForFavoriteMovies();
         } else {
             Log.d(LOG_TAG, "Sorting by Vote Average");
             loadJSONForTopRatedMovies();
         }
     }
 
+    private void initViewsForFavoriteMovies() {
+        recycler_view = findViewById(R.id.recycler_view);
+
+        movieList = new ArrayList<>();
+        moviesAdapter = new MoviesAdapter(this, movieList);
+
+        if (getActivity().getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT){
+            recycler_view.setLayoutManager(new GridLayoutManager(this, 2));
+        } else {
+            recycler_view.setLayoutManager(new GridLayoutManager(this, 4));
+        }
+
+        recycler_view.setItemAnimator(new DefaultItemAnimator());
+        recycler_view.setAdapter(moviesAdapter);
+        moviesAdapter.notifyDataSetChanged();
+
+        favoriteDbHelper = new FavoriteDbHelper(currentActivity);
+
+        getAllFavoriteMovies();
+    }
+
+    private void getAllFavoriteMovies() {
+        new AsyncTask<Void, Void, Void>() {
+
+            @Override
+            protected Void doInBackground(Void... voids) {
+                movieList.clear();
+                movieList.addAll(favoriteDbHelper.getAllFavorite());
+                return null;
+            }
+
+            @Override
+            protected void onPostExecute(Void aVoid) {
+                super.onPostExecute(aVoid);
+                moviesAdapter.notifyDataSetChanged();
+            }
+        }.execute();
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
         if (movieList.isEmpty()) {
+            checkSortOrder();
+        } else {
             checkSortOrder();
         }
     }

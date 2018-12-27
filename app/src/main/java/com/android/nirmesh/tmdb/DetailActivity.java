@@ -19,6 +19,8 @@ import android.widget.Toast;
 import com.android.nirmesh.tmdb.adapter.TrailerAdapter;
 import com.android.nirmesh.tmdb.api.Client;
 import com.android.nirmesh.tmdb.api.Service;
+import com.android.nirmesh.tmdb.data.FavoriteDbHelper;
+import com.android.nirmesh.tmdb.model.Movie;
 import com.android.nirmesh.tmdb.model.Trailer;
 import com.android.nirmesh.tmdb.model.TrailerResponse;
 import com.bumptech.glide.Glide;
@@ -36,9 +38,14 @@ public class DetailActivity extends AppCompatActivity {
 
     TextView title, plotSynopsis, userRating, releaseDate;
     ImageView thumbnail_image_header;
+
     private RecyclerView recycler_view_trailer;
     private TrailerAdapter adapter;
     private List<Trailer> trailerList;
+
+    private FavoriteDbHelper favoriteDbHelper;
+    private Movie favoriteMovie;
+    public final AppCompatActivity currentActivity = DetailActivity.this;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,12 +72,14 @@ public class DetailActivity extends AppCompatActivity {
             String rating = getIntent().getExtras().getString("vote_average");
             String dateOfRelease = getIntent().getExtras().getString("release_date");
 
+            String poster = "https://image.tmdb.org/t/p/w500" + thumbnail;
+
             RequestOptions requestOptions = new RequestOptions();
             requestOptions.placeholder(R.drawable.load);
 
             Glide.with(this)
                     .setDefaultRequestOptions(requestOptions)
-                    .load(thumbnail)
+                    .load(poster)
                     .into(thumbnail_image_header);
 
             title.setText(movieName);
@@ -94,8 +103,14 @@ public class DetailActivity extends AppCompatActivity {
                     editor.putBoolean("Favorite Added", true);
                     editor.commit();
 
+                    saveFavorite();
+
                     Snackbar.make(buttonView, "Added to Favorite", Snackbar.LENGTH_SHORT).show();
                 } else {
+                    int movieID = getIntent().getExtras().getInt("id");
+                    favoriteDbHelper = new FavoriteDbHelper(DetailActivity.this);
+                    favoriteDbHelper.deleteFavorite(movieID);
+
                     SharedPreferences.Editor editor = getSharedPreferences("com.android.nirmesh.tmdb.DetailActivity",
                             MODE_PRIVATE).edit();
                     editor.putBoolean("Favorite Removed", true);
@@ -182,5 +197,22 @@ public class DetailActivity extends AppCompatActivity {
             Log.d("Error", e.getMessage());
             Toast.makeText(this, e.toString(), Toast.LENGTH_SHORT).show();
         }
+    }
+
+    public void saveFavorite() {
+        favoriteDbHelper = new FavoriteDbHelper(currentActivity);
+        favoriteMovie = new Movie();
+
+        int movieId = getIntent().getExtras().getInt("id");
+        String rate = getIntent().getExtras().getString("vote_average");
+        String poster = getIntent().getExtras().getString("poster_path");
+
+        favoriteMovie.setId(movieId);
+        favoriteMovie.setOriginalTitle(title.getText().toString().trim());
+        favoriteMovie.setPosterPath(poster);
+        favoriteMovie.setVoteAverage(Double.parseDouble(rate));
+        favoriteMovie.setOverview(plotSynopsis.getText().toString().trim());
+
+        favoriteDbHelper.addFavorite(favoriteMovie);
     }
 }
