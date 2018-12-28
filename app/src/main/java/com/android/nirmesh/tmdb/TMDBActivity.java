@@ -54,6 +54,8 @@ public class TMDBActivity extends AppCompatActivity
         setContentView(R.layout.activity_tmdb);
 
         initViews();
+
+        recycler_view = findViewById(R.id.recycler_view);
     }
 
     private Activity getActivity() {
@@ -114,7 +116,9 @@ public class TMDBActivity extends AppCompatActivity
                 @Override
                 public void onResponse(Call<MoviesResponse> call, Response<MoviesResponse> response) {
                     List<Movie> movies = response.body().getResults();
-                    Collections.sort(movies, Movie.BY_NAME_ALPHABETICAL);
+
+                    // FOR SORTING ALL POPULAR MOVIES ALPHABETICALLY. RESPECTIVE ACTION IN Movie.java
+                    //Collections.sort(movies, Movie.BY_NAME_ALPHABETICAL);
 
                     recycler_view.setAdapter(new MoviesAdapter(getApplicationContext(), movies));
                     recycler_view.smoothScrollToPosition(0);

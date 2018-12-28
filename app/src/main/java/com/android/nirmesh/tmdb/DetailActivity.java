@@ -3,7 +3,6 @@ package com.android.nirmesh.tmdb;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
-import android.support.design.widget.AppBarLayout;
 import android.support.design.widget.CollapsingToolbarLayout;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
@@ -47,6 +46,10 @@ public class DetailActivity extends AppCompatActivity {
     private Movie favoriteMovie;
     public final AppCompatActivity currentActivity = DetailActivity.this;
 
+    Movie movie;
+    String thumbnail, movieName, synopsis, rating, dateOfRelease;
+    int movieId;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -56,21 +59,21 @@ public class DetailActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-        initCollapsingToolbar();
-
         thumbnail_image_header = findViewById(R.id.thumbnail_image_header);
-        title = findViewById(R.id.title);
         plotSynopsis = findViewById(R.id.plotSynopsis);
         userRating = findViewById(R.id.userRating);
         releaseDate = findViewById(R.id.releaseDate);
 
         Intent intent = getIntent();
-        if (intent.hasExtra("original_title")) {
-            String thumbnail = getIntent().getExtras().getString("poster_path");
-            String movieName = getIntent().getExtras().getString("original_title");
-            String synopsis = getIntent().getExtras().getString("overview");
-            String rating = getIntent().getExtras().getString("vote_average");
-            String dateOfRelease = getIntent().getExtras().getString("release_date");
+        if (intent.hasExtra("movies")) {
+            movie = getIntent().getParcelableExtra("movies");
+
+            thumbnail = movie.getPosterPath();
+            movieName = movie.getOriginalTitle();
+            synopsis = movie.getOverview();
+            rating = Double.toString(movie.getVoteAverage());
+            dateOfRelease = movie.getReleaseDate();
+            movieId = movie.getId();
 
             String poster = "https://image.tmdb.org/t/p/w500" + thumbnail;
 
@@ -82,10 +85,11 @@ public class DetailActivity extends AppCompatActivity {
                     .load(poster)
                     .into(thumbnail_image_header);
 
-            title.setText(movieName);
             plotSynopsis.setText(synopsis);
             userRating.setText(rating);
             releaseDate.setText(dateOfRelease);
+
+            ((CollapsingToolbarLayout) findViewById(R.id.collapsing_toolbar)).setTitle(movieName);
         } else {
             Toast.makeText(this, "No API Data", Toast.LENGTH_SHORT).show();
         }
@@ -124,33 +128,6 @@ public class DetailActivity extends AppCompatActivity {
         initViews();
     }
 
-    private void initCollapsingToolbar() {
-        final CollapsingToolbarLayout collapsing_toolbar = findViewById(R.id.collapsing_toolbar);
-        collapsing_toolbar.setTitle(" ");
-
-        AppBarLayout appbar = findViewById(R.id.appbar);
-        appbar.setExpanded(true);
-
-        appbar.addOnOffsetChangedListener(new AppBarLayout.OnOffsetChangedListener() {
-            boolean isShow = false;
-            int scrollRange = -1;
-
-            @Override
-            public void onOffsetChanged(AppBarLayout appBarLayout, int verticalOffset) {
-                if (scrollRange == -1) {
-                    scrollRange = appBarLayout.getTotalScrollRange();
-                }
-                if (scrollRange + verticalOffset == 0) {
-                    collapsing_toolbar.setTitle(getString(R.string.movie_details));
-                    isShow = true;
-                } else if (isShow) {
-                    collapsing_toolbar.setTitle(" ");
-                    isShow = false;
-                }
-            }
-        });
-    }
-
     private void initViews() {
         trailerList = new ArrayList<>();
         adapter = new TrailerAdapter(this, trailerList);
@@ -165,7 +142,6 @@ public class DetailActivity extends AppCompatActivity {
     }
 
     private void loadJSON() {
-        int movie_id = getIntent().getExtras().getInt("id");
 
         try {
             if (BuildConfig.THE_MOVIE_DB_API_TOKEN.isEmpty()) {
@@ -177,7 +153,7 @@ public class DetailActivity extends AppCompatActivity {
             Client Client = new Client();
             Service apiService = Client.getClient().create(Service.class);
 
-            Call<TrailerResponse> call = apiService.getMovieTrailer(movie_id, BuildConfig.THE_MOVIE_DB_API_TOKEN);
+            Call<TrailerResponse> call = apiService.getMovieTrailer(movieId, BuildConfig.THE_MOVIE_DB_API_TOKEN);
             call.enqueue(new Callback<TrailerResponse>() {
                 @Override
                 public void onResponse(Call<TrailerResponse> call, Response<TrailerResponse> response) {
@@ -203,15 +179,13 @@ public class DetailActivity extends AppCompatActivity {
         favoriteDbHelper = new FavoriteDbHelper(currentActivity);
         favoriteMovie = new Movie();
 
-        int movieId = getIntent().getExtras().getInt("id");
-        String rate = getIntent().getExtras().getString("vote_average");
-        String poster = getIntent().getExtras().getString("poster_path");
+        Double rate = movie.getVoteAverage();
 
         favoriteMovie.setId(movieId);
-        favoriteMovie.setOriginalTitle(title.getText().toString().trim());
-        favoriteMovie.setPosterPath(poster);
-        favoriteMovie.setVoteAverage(Double.parseDouble(rate));
-        favoriteMovie.setOverview(plotSynopsis.getText().toString().trim());
+        favoriteMovie.setOriginalTitle(movieName);
+        favoriteMovie.setPosterPath(thumbnail);
+        favoriteMovie.setVoteAverage(rate);
+        favoriteMovie.setOverview(synopsis);
 
         favoriteDbHelper.addFavorite(favoriteMovie);
     }
