@@ -1,8 +1,8 @@
 package com.android.nirmesh.tmdb;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.preference.PreferenceManager;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.support.design.widget.CollapsingToolbarLayout;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
@@ -18,6 +18,7 @@ import android.widget.Toast;
 import com.android.nirmesh.tmdb.adapter.TrailerAdapter;
 import com.android.nirmesh.tmdb.api.Client;
 import com.android.nirmesh.tmdb.api.Service;
+import com.android.nirmesh.tmdb.data.FavoriteContract;
 import com.android.nirmesh.tmdb.data.FavoriteDbHelper;
 import com.android.nirmesh.tmdb.model.Movie;
 import com.android.nirmesh.tmdb.model.Trailer;
@@ -50,6 +51,8 @@ public class DetailActivity extends AppCompatActivity {
     String thumbnail, movieName, synopsis, rating, dateOfRelease;
     int movieId;
 
+    private SQLiteDatabase mSQLiteDatabase;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -58,6 +61,9 @@ public class DetailActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+
+        FavoriteDbHelper dbHelper = new FavoriteDbHelper(this);
+        mSQLiteDatabase = dbHelper.getWritableDatabase();
 
         thumbnail_image_header = findViewById(R.id.thumbnail_image_header);
         plotSynopsis = findViewById(R.id.plotSynopsis);
@@ -96,34 +102,37 @@ public class DetailActivity extends AppCompatActivity {
 
         MaterialFavoriteButton favoriteButton = findViewById(R.id.favoriteButton);
 
-        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-
-        favoriteButton.setOnFavoriteChangeListener(new MaterialFavoriteButton.OnFavoriteChangeListener() {
-            @Override
-            public void onFavoriteChanged(MaterialFavoriteButton buttonView, boolean favorite) {
-                if (favorite) {
-                    SharedPreferences.Editor editor = getSharedPreferences("com.android.nirmesh.tmdb.DetailActivity",
-                            MODE_PRIVATE).edit();
-                    editor.putBoolean("Favorite Added", true);
-                    editor.commit();
-
-                    saveFavorite();
-
-                    Snackbar.make(buttonView, "Added to Favorite", Snackbar.LENGTH_SHORT).show();
-                } else {
-                    int movieID = getIntent().getExtras().getInt("id");
-                    favoriteDbHelper = new FavoriteDbHelper(DetailActivity.this);
-                    favoriteDbHelper.deleteFavorite(movieID);
-
-                    SharedPreferences.Editor editor = getSharedPreferences("com.android.nirmesh.tmdb.DetailActivity",
-                            MODE_PRIVATE).edit();
-                    editor.putBoolean("Favorite Removed", true);
-                    editor.commit();
-
-                    Snackbar.make(buttonView, "Removed from Favorite", Snackbar.LENGTH_SHORT).show();
+        if (existsInFavorite(movieName)) {
+            favoriteButton.setFavorite(true);
+            favoriteButton.setOnFavoriteChangeListener(new MaterialFavoriteButton.OnFavoriteChangeListener() {
+                @Override
+                public void onFavoriteChanged(MaterialFavoriteButton buttonView, boolean favorite) {
+                    if (favorite == true) {
+                        saveFavorite();
+                        Snackbar.make(buttonView, "Added to Favorites", Snackbar.LENGTH_SHORT).show();
+                    } else {
+                        favoriteDbHelper = new FavoriteDbHelper(DetailActivity.this);
+                        favoriteDbHelper.deleteFavorite(movieId);
+                        Snackbar.make(buttonView, "Removed From Favorites", Snackbar.LENGTH_SHORT).show();
+                    }
                 }
-            }
-        });
+            });
+        } else {
+            favoriteButton.setOnFavoriteChangeListener(new MaterialFavoriteButton.OnFavoriteChangeListener() {
+                @Override
+                public void onFavoriteChanged(MaterialFavoriteButton buttonView, boolean favorite) {
+                    if (favorite == true) {
+                        saveFavorite();
+                        Snackbar.make(buttonView, "Added to Favorites", Snackbar.LENGTH_SHORT).show();
+                    } else {
+                        int movieID = getIntent().getExtras().getInt("id");
+                        favoriteDbHelper = new FavoriteDbHelper(DetailActivity.this);
+                        favoriteDbHelper.deleteFavorite(movieID);
+                        Snackbar.make(buttonView, "Removed From Favorites", Snackbar.LENGTH_SHORT).show();
+                    }
+                }
+            });
+        }
 
         initViews();
     }
@@ -188,5 +197,35 @@ public class DetailActivity extends AppCompatActivity {
         favoriteMovie.setOverview(synopsis);
 
         favoriteDbHelper.addFavorite(favoriteMovie);
+    }
+
+    private boolean existsInFavorite(String searchItem) {
+        String[] projection = {
+                FavoriteContract.FavoriteEntry._ID,
+                FavoriteContract.FavoriteEntry.COLUMN_MOVIEID,
+                FavoriteContract.FavoriteEntry.COLUMN_TITLE,
+                FavoriteContract.FavoriteEntry.COLUMN_USERRATING,
+                FavoriteContract.FavoriteEntry.COLUMN_POSTER_PATH,
+                FavoriteContract.FavoriteEntry.COLUMN_PLOT_SYNOPSIS
+        };
+
+        String selection = FavoriteContract.FavoriteEntry.COLUMN_TITLE + "=?";
+        String[] selectionArgs = { searchItem };
+        String limit = "1";
+
+        Cursor cursor = mSQLiteDatabase.query(
+                FavoriteContract.FavoriteEntry.TABLE_NAME,
+                projection,
+                selection,
+                selectionArgs,
+                null,
+                null,
+                null,
+                limit);
+
+        boolean exists = (cursor.getCount() > 0);
+        cursor.close();
+
+        return exists;
     }
 }

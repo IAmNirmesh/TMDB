@@ -7,6 +7,8 @@ import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.preference.PreferenceManager;
 import android.support.v4.widget.SwipeRefreshLayout;
@@ -21,19 +23,25 @@ import android.view.MenuItem;
 import android.widget.Toast;
 
 import com.android.nirmesh.tmdb.adapter.MoviesAdapter;
-import com.android.nirmesh.tmdb.api.Client;
 import com.android.nirmesh.tmdb.api.Service;
 import com.android.nirmesh.tmdb.data.FavoriteDbHelper;
 import com.android.nirmesh.tmdb.model.Movie;
 import com.android.nirmesh.tmdb.model.MoviesResponse;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import okhttp3.Cache;
+import okhttp3.Interceptor;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 public class TMDBActivity extends AppCompatActivity
                 implements SharedPreferences.OnSharedPreferenceChangeListener {
@@ -47,6 +55,8 @@ public class TMDBActivity extends AppCompatActivity
 
     private AppCompatActivity currentActivity = TMDBActivity.this;
     private FavoriteDbHelper favoriteDbHelper;
+
+    int cacheSize = 10 * 1024 * 1024;   // 10 MB
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -108,8 +118,31 @@ public class TMDBActivity extends AppCompatActivity
                 return;
             }
 
-            Client Client = new Client();
-            Service apiService = Client.getClient().create(Service.class);
+            Cache cache = new Cache(getCacheDir(), cacheSize);
+
+            OkHttpClient okHttpClient = new OkHttpClient.Builder().cache(cache).addInterceptor(new Interceptor() {
+                @Override
+                public okhttp3.Response intercept(Chain chain) throws IOException {
+                    Request request = chain.request();
+                    if (!isNetworkAvailable()) {
+                        int maxStale = 60 * 60 * 24 * 28;   /*tolerate 4-weeks stale*/
+                        request = request
+                                .newBuilder()
+                                .header("Cache-Control", "public, only-if-cached, max-stale=" + maxStale)
+                                .build();
+                    }
+
+                    return chain.proceed(request);
+                }
+            }).build();
+
+            Retrofit.Builder builder = new Retrofit.Builder()
+                    .baseUrl("http://api.themoviedb.org/3/")
+                    .client(okHttpClient)
+                    .addConverterFactory(GsonConverterFactory.create());
+
+            Retrofit retrofit = builder.build();
+            Service apiService = retrofit.create(Service.class);
 
             Call<MoviesResponse> call = apiService.getPopularMovies(BuildConfig.THE_MOVIE_DB_API_TOKEN);
             call.enqueue(new Callback<MoviesResponse>() {
@@ -149,8 +182,31 @@ public class TMDBActivity extends AppCompatActivity
                 return;
             }
 
-            Client Client = new Client();
-            Service apiService = Client.getClient().create(Service.class);
+            Cache cache = new Cache(getCacheDir(), cacheSize);
+
+            OkHttpClient okHttpClient = new OkHttpClient.Builder().cache(cache).addInterceptor(new Interceptor() {
+                @Override
+                public okhttp3.Response intercept(Chain chain) throws IOException {
+                    Request request = chain.request();
+                    if (!isNetworkAvailable()) {
+                        int maxStale = 60 * 60 * 24 * 28;   /*tolerate 4-weeks stale*/
+                        request = request
+                                .newBuilder()
+                                .header("Cache-Control", "public, only-if-cached, max-stale=" + maxStale)
+                                .build();
+                    }
+
+                    return chain.proceed(request);
+                }
+            }).build();
+
+            Retrofit.Builder builder = new Retrofit.Builder()
+                    .baseUrl("http://api.themoviedb.org/3/")
+                    .client(okHttpClient)
+                    .addConverterFactory(GsonConverterFactory.create());
+
+            Retrofit retrofit = builder.build();
+            Service apiService = retrofit.create(Service.class);
 
             Call<MoviesResponse> call = apiService.getTopRatedMovies(BuildConfig.THE_MOVIE_DB_API_TOKEN);
             call.enqueue(new Callback<MoviesResponse>() {
@@ -268,5 +324,13 @@ public class TMDBActivity extends AppCompatActivity
         } else {
             checkSortOrder();
         }
+    }
+
+    private boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
     }
 }

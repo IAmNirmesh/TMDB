@@ -54,12 +54,12 @@
 
             <com.github.ivbaranov.mfb.MaterialFavoriteButton
                 android:id="@+id/favoriteButton"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
                 android:layout_marginLeft="@dimen/layout_margin_left"
                 android:layout_marginTop="@dimen/activity_vertical_margin"
-                android:background="@color/colorPrimary"
-                android:padding="@dimen/padding_layout" />
+                android:padding="@dimen/padding_layout"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                app:mfb_type="heart" />
 
             <TextView
                 android:id="@+id/userRating"
