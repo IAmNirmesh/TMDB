@@ -97,18 +97,43 @@
 
             <TextView
                 android:id="@+id/trailer"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
                 android:text="@string/trailer"
-                android:textSize="30sp" />
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_margin="@dimen/layout_margin_top2"
+                android:layout_below="@+id/plotSynopsis"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
 
-            <android.support.v7.widget.RecyclerView
+            <com.takusemba.multisnaprecyclerview.MultiSnapRecyclerView
                 android:id="@+id/recycler_view_trailer"
-                android:layout_width="368dp"
+                android:layout_below="@id/trailer"
+                android:layout_gravity="center_vertical"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/plotSynopsis"
-                android:clipToPadding="false"
-                android:scrollbars="vertical" />
+                app:msrv_gravity="start"
+                app:msrv_ms_per_inch="@dimen/normal_speed"
+                app:msrv_snap_count="1" />
+
+            <TextView
+                android:id="@+id/textReview"
+                android:text="@string/review"
+                android:layout_below="@+id/recycler_view_trailer"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_margin="@dimen/layout_margin_top2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <com.takusemba.multisnaprecyclerview.MultiSnapRecyclerView
+                android:id="@+id/recyclerViewReview"
+                android:layout_below="@id/textReview"
+                android:layout_gravity="center_vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:msrv_gravity="center"
+                app:msrv_ms_per_inch="@dimen/low_speed"
+                app:msrv_snap_count="2" />
 
         </RelativeLayout>
 

@@ -1,6 +1,7 @@
 package com.android.nirmesh.tmdb.api;
 
 import com.android.nirmesh.tmdb.model.MoviesResponse;
+import com.android.nirmesh.tmdb.model.Review;
 import com.android.nirmesh.tmdb.model.TrailerResponse;
 
 import retrofit2.Call;
@@ -18,4 +19,7 @@ public interface Service {
 
     @GET("movie/{movie_id}/videos")
     Call<TrailerResponse> getMovieTrailer(@Path("movie_id") int id, @Query("api_key") String apiKey);
+
+    @GET("movie/{movie_id}/reviews")
+    Call<Review> getReview(@Path("movie_id") int id, @Query("api_key") String apiKey);
 }

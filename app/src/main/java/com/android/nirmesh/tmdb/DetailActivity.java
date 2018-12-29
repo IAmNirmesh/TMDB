@@ -23,17 +23,21 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.nirmesh.tmdb.adapter.ReviewAdapter;
 import com.android.nirmesh.tmdb.adapter.TrailerAdapter;
 import com.android.nirmesh.tmdb.api.Client;
 import com.android.nirmesh.tmdb.api.Service;
 import com.android.nirmesh.tmdb.data.FavoriteContract;
 import com.android.nirmesh.tmdb.data.FavoriteDbHelper;
 import com.android.nirmesh.tmdb.model.Movie;
+import com.android.nirmesh.tmdb.model.Review;
+import com.android.nirmesh.tmdb.model.ReviewResult;
 import com.android.nirmesh.tmdb.model.Trailer;
 import com.android.nirmesh.tmdb.model.TrailerResponse;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
 import com.github.ivbaranov.mfb.MaterialFavoriteButton;
+import com.takusemba.multisnaprecyclerview.MultiSnapRecyclerView;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -176,35 +180,95 @@ public class DetailActivity extends AppCompatActivity {
         adapter.notifyDataSetChanged();
 
         loadJSON();
+
+        loadReviews();
     }
 
     private void loadJSON() {
-
         try {
             if (BuildConfig.THE_MOVIE_DB_API_TOKEN.isEmpty()) {
-                Toast.makeText(getApplicationContext(), "Please obtain your API Key from themoviedb.org",
+                Toast.makeText(getApplicationContext(), "Please obtain your API Key",
                         Toast.LENGTH_SHORT).show();
                 return;
+            } else {
+
+                Client Client = new Client();
+                Service apiService = Client.getClient().create(Service.class);
+
+                Call<TrailerResponse> call = apiService.getMovieTrailer(movieId, BuildConfig.THE_MOVIE_DB_API_TOKEN);
+                call.enqueue(new Callback<TrailerResponse>() {
+                    @Override
+                    public void onResponse(Call<TrailerResponse> call, Response<TrailerResponse> response) {
+                        if (response.isSuccessful()) {
+                            if (response.body() != null) {
+                                List<Trailer> trailer = response.body().getResults();
+
+                                MultiSnapRecyclerView recycler_view_trailer = findViewById(R.id.recycler_view_trailer);
+                                LinearLayoutManager firstManager = new LinearLayoutManager(
+                                        getApplicationContext(),
+                                        LinearLayoutManager.VERTICAL,
+                                        false);
+                                recycler_view_trailer.setLayoutManager(firstManager);
+
+                                recycler_view_trailer.setAdapter(new TrailerAdapter(getApplicationContext(), trailer));
+                                recycler_view_trailer.smoothScrollToPosition(0);
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<TrailerResponse> call, Throwable t) {
+                        Log.d("Error", t.getMessage());
+                        Toast.makeText(DetailActivity.this, "Error in Fetching Trailer", Toast.LENGTH_SHORT).show();
+                    }
+                });
             }
 
-            Client Client = new Client();
-            Service apiService = Client.getClient().create(Service.class);
+        } catch (Exception e) {
+            Log.d("Error", e.getMessage());
+            Toast.makeText(this, e.toString(), Toast.LENGTH_SHORT).show();
+        }
+    }
 
-            Call<TrailerResponse> call = apiService.getMovieTrailer(movieId, BuildConfig.THE_MOVIE_DB_API_TOKEN);
-            call.enqueue(new Callback<TrailerResponse>() {
-                @Override
-                public void onResponse(Call<TrailerResponse> call, Response<TrailerResponse> response) {
-                    List<Trailer> trailer = response.body().getResults();
-                    recycler_view_trailer.setAdapter(new TrailerAdapter(getApplicationContext(), trailer));
-                    recycler_view_trailer.smoothScrollToPosition(0);
-                }
+    private void loadReviews() {
+        try {
+            if (BuildConfig.THE_MOVIE_DB_API_TOKEN.isEmpty()) {
+                Toast.makeText(getApplicationContext(), "Please get your API Key",
+                        Toast.LENGTH_SHORT).show();
+                return;
+            } else {
 
-                @Override
-                public void onFailure(Call<TrailerResponse> call, Throwable t) {
-                    Log.d("Error", t.getMessage());
-                    Toast.makeText(DetailActivity.this, "Error fetching trailer data", Toast.LENGTH_SHORT).show();
-                }
-            });
+                Client Client = new Client();
+                Service apiService = Client.getClient().create(Service.class);
+
+                Call<Review> call = apiService.getReview(movieId, BuildConfig.THE_MOVIE_DB_API_TOKEN);
+                call.enqueue(new Callback<Review>() {
+                    @Override
+                    public void onResponse(Call<Review> call, Response<Review> response) {
+                        if (response.isSuccessful()) {
+                            if (response.body() != null) {
+                                List<ReviewResult> reviewResults = response.body().getResults();
+
+                                MultiSnapRecyclerView recyclerViewReview = findViewById(R.id.recyclerViewReview);
+                                LinearLayoutManager firstManager = new LinearLayoutManager(
+                                        getApplicationContext(),
+                                        LinearLayoutManager.VERTICAL,
+                                        false);
+                                recyclerViewReview.setLayoutManager(firstManager);
+
+                                recyclerViewReview.setAdapter(new ReviewAdapter(getApplicationContext(), reviewResults));
+                                recyclerViewReview.smoothScrollToPosition(0);
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<Review> call, Throwable t) {
+                        Log.d("Error", t.getMessage());
+                        Toast.makeText(DetailActivity.this, "Error in Fetching Reviews", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
 
         } catch (Exception e) {
             Log.d("Error", e.getMessage());
